@@ -1,1 +1,2 @@
-pub(crate) mod get_ipinfo_io;
+pub mod get_ipinfo_io;
+mod response_type;

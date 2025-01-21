@@ -1,11 +1,13 @@
 use reqwest::Client;
-use serde_json::Value;
+use crate::integrations::action_response::{self, ActionResponse};
+
+use super::response_type::IpinfoIo;
 
 pub async fn fetch_ip_info_io(
     base_url: &str,
     ip_address: &str,
     token: &str,
-) {
+)-> Result<ActionResponse,String> {
     let client = Client::new();
     let url = format!("{}{}?token={}", base_url, ip_address, token);
 
@@ -18,21 +20,34 @@ pub async fn fetch_ip_info_io(
     match response {
         Ok(resp) => {
             if resp.status().is_success() {
-                match resp.json::<Value>().await {
-                    Ok(json) => println!("Response JSON: {:#?}", json),
-                    Err(err) => eprintln!("Failed to parse JSON response: {}", err),
+                match resp.json::<IpinfoIo>().await {
+                    Ok(ipinfoio) => {
+                        let action_response = ipinfoio.into_action_response();
+                        Ok(action_response)
+                    },
+                    Err(err) => {
+                        let err = format!("Failed to parse JSON response: {}", err);
+                        Err(err)
+                    },
                 }
             } else {
-                eprintln!(
+                let err = format!(
                     "Request failed with status: {} and message: {}",
                     resp.status(),
                     resp.text().await.unwrap_or_else(|_| "Unknown error".to_string())
                 );
+                Err(err)
             }
         }
         Err(err) => match err.status() {
-            Some(status) => eprintln!("Error: {} with status code: {}", err, status),
-            None => eprintln!("Error: {}", err),
+            Some(status) => {
+                let err = format!("Error: {} with status code: {}", err, status);
+                Err(err)
+            },
+            None => {
+                let err = format!("Error: {}", err);
+                Err(err)
+            },
         },
     }
 }
