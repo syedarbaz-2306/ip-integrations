@@ -1,7 +1,10 @@
 use reqwest::Client;
 use serde_json::Value;
+use crate::integrations::action_response::ActionResponse;
 
-pub async fn check_ip(ip_address: &str, api_key: &str) {
+use super::types::{AbsCheckResponse,AbsCheck};
+
+pub async fn check_ip(ip_address: &str, api_key: &str)->Result<ActionResponse,String> {
     let client = Client::new();
     let url = "https://api.abuseipdb.com/api/v2/check";
 
@@ -21,21 +24,34 @@ pub async fn check_ip(ip_address: &str, api_key: &str) {
     match response {
         Ok(resp) => {
             if resp.status().is_success() {
-                match resp.json::<Value>().await {
-                    Ok(json) => println!("Response JSON: {:#?}", json["data"]),
-                    Err(err) => eprintln!("Failed to parse JSON response: {}", err),
+                match resp.json::<AbsCheckResponse>().await {
+                    Ok(abs_check) => {
+                        let action_response =  abs_check.data.into_action_response();
+                        Ok(action_response)
+                    },
+                    Err(err) => {
+                        let err = format!("Failed to parse JSON response: {}", err);
+                        Err(err)
+                    },
                 }
             } else {
-                eprintln!(
+                let err = format!(
                     "Request failed with status: {} and message: {}",
                     resp.status(),
                     resp.text().await.unwrap_or_else(|_| "Unknown error".to_string())
                 );
+                Err(err)
             }
         }
         Err(err) => match err.status() {
-            Some(status) => eprintln!("Error: {} with status code: {}", err, status),
-            None => eprintln!("Error: {}", err),
+            Some(status) => {
+                let err = format!("Error: {} with status code: {}", err, status);
+                Err(err)
+            },
+            None => {
+                let err = format!("Error: {}", err);
+                Err(err)
+            },
         },
     }
 }
