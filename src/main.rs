@@ -1,5 +1,6 @@
 
 mod integrations;
+use integrations::ip2_location::get_ip2location::fetch_ip2loaction;
 use integrations::ip_info_is::get_ip_info_is::fetch_ipinfo_is;
 // use crate::integrations::ip_info_io::get_ipinfo_io::fetch_ip_info_io;
 // use integrations::ip_abuse_endponits::abuse_ipinfo::{check_ip, fetch_reports, fetch_blacklist};
@@ -7,11 +8,11 @@ use integrations::{action_response, ip_stack::get_ip_stack::fetch_ipstack_info};
 #[tokio::main]
 async fn main() {
 
-    //? ip info is example 
-    match fetch_ipinfo_is().await {
-        Ok(res) => println!("data : {:?}",res),
-        Err(e)=> println!("error : {}",e),
-    }
+    // //? ip info is example 
+    // match fetch_ipinfo_is().await {
+    //     Ok(res) => println!("data : {:?}",res),
+    //     Err(e)=> println!("error : {}",e),
+    // }
 
     //? ip info io example 
     // let base_url = "https://ipinfo.io/";
@@ -45,4 +46,15 @@ async fn main() {
     //     Ok(action_response)=> println!("action response: {:?}", action_response),
     //     Err(e) => println!("Error {}", e),
     // };
+
+    //? ip2 loaction endpoint example 
+
+    let ip_addr = "152.58.193.76";
+    let api_key = "7FBCD5101CA15C2A79C56A35F146E2DB";
+    let res = fetch_ip2loaction(ip_addr, api_key).await;
+
+    match res {
+        Ok(action_response)=>println!("json:{:?}",action_response),
+        Err(e) => println!("Error {}", e),
+    }
 }
