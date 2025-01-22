@@ -1,8 +1,10 @@
+use std::collections::HashMap;
+use chrono::Utc;
 use reqwest::Client;
 use serde_json::Value;
-use crate::integrations::action_response::ActionResponse;
+use crate::integrations::{action_response::ActionResponse, ip_abuse_endponits::types::ReportResponse};
 
-use super::types::{AbsCheckResponse,AbsCheck};
+use super::types::{AbsCheck, AbsCheckResponse, ApiResponse, ReportsResponse, AbsBlacklistResponse};
 
 pub async fn check_ip(ip_address: &str, api_key: &str)->Result<ActionResponse,String> {
     let client = Client::new();
@@ -56,11 +58,15 @@ pub async fn check_ip(ip_address: &str, api_key: &str)->Result<ActionResponse,St
     }
 }
 
-pub async fn fetch_reports(ip_address: &str, page: u32, per_page: u32, api_key: &str) {
+pub async fn fetch_reports(
+    ip_address: &str,
+    page: u32,
+    per_page: u32,
+    api_key: &str,
+) -> Result<ActionResponse, String> {
     let client = Client::new();
     let url = "https://api.abuseipdb.com/api/v2/reports";
 
-    // Perform the GET request with query parameters
     let response = client
         .get(url)
         .query(&[
@@ -76,30 +82,36 @@ pub async fn fetch_reports(ip_address: &str, page: u32, per_page: u32, api_key: 
     match response {
         Ok(resp) => {
             if resp.status().is_success() {
-                match resp.json::<Value>().await {
-                    Ok(json) => println!("Response JSON: {:#?}", json),
-                    Err(err) => eprintln!("Failed to parse JSON response: {}", err),
+                match resp.json::<ApiResponse>().await {
+                    Ok(api_response) => {
+                        Ok(api_response.data.into_action_response())
+                    },
+                    Err(err) => Err(format!("Failed to get response text: {}", err))
                 }
             } else {
-                eprintln!(
+                let err = format!(
                     "Request failed with status: {} and message: {}",
                     resp.status(),
                     resp.text().await.unwrap_or_else(|_| "Unknown error".to_string())
                 );
+                Err(err)
             }
         }
         Err(err) => match err.status() {
-            Some(status) => eprintln!("Error: {} with status code: {}", err, status),
-            None => eprintln!("Error: {}", err),
+            Some(status) => Err(format!("Error: {} with status code: {}", err, status)),
+            None => Err(format!("Error: {}", err)),
         },
     }
 }
 
-pub async fn fetch_blacklist(confidence_minimum: u32, api_key: &str, limit:u32) {
+pub async fn fetch_blacklist(
+    confidence_minimum: u32, 
+    api_key: &str, 
+    limit:u32,
+) -> Result<ActionResponse, String> {
     let client = Client::new();
-    let url = "https://api.abuseipdb.com/api/v2/blacklist?onlyCountries=IN,US,CA?ipVersion=6 ";
+    let url = format!("https://api.abuseipdb.com/api/v2/blacklist");
 
-    // Perform the GET request with query parameters
     let response = client
         .get(url)
         .query(&[("confidenceMinimum", &confidence_minimum.to_string()),("limit",&limit.to_string())])
@@ -111,21 +123,59 @@ pub async fn fetch_blacklist(confidence_minimum: u32, api_key: &str, limit:u32) 
     match response {
         Ok(resp) => {
             if resp.status().is_success() {
-                match resp.json::<Value>().await {
-                    Ok(json) => println!("Response JSON: {:#?}", json),
-                    Err(err) => eprintln!("Failed to parse JSON response: {}", err),
+                match resp.json::<AbsBlacklistResponse>().await {
+                    Ok(json) => {
+                        Ok(json.into_action_response())
+                    },
+                    Err(err) => Err(format!("Failed to parse JSON response: {}", err)),
                 }
             } else {
-                eprintln!(
+                let err = format!(
                     "Request failed with status: {} and message: {}",
                     resp.status(),
                     resp.text().await.unwrap_or_else(|_| "Unknown error".to_string())
                 );
+                Err(err)
             }
         }
         Err(err) => match err.status() {
-            Some(status) => eprintln!("Error: {} with status code: {}", err, status),
-            None => eprintln!("Error: {}", err),
+            Some(status) => Err(format!("Error: {} with status code: {}", err, status)),
+            None => Err(format!("Error: {}", err)),
         },
+    }
+}
+
+
+pub async fn report_ip(ip:&str, api_key: &str, categories:&str, comment: &str)-> Result<ActionResponse, String>{
+    let client = Client::new();
+    let url = "https://api.abuseipdb.com/api/v2/report";
+
+    let mut form = HashMap::new();
+    let current_datetime = Utc::now().to_rfc3339();
+    println!("current datetime: {}", current_datetime);
+    form.insert("ip", ip);
+    form.insert("categories", categories);
+    form.insert("comment", comment);
+    form.insert("timestamp", &current_datetime);
+
+     let result = client
+        .post(url)
+        .form(&form)
+        .header("Key", api_key)
+        .header("Accept", "application/json")
+        .send()
+        .await;
+
+    match result {
+        Ok(response)=> {
+            let body = response.json::<ReportResponse>().await;
+            match body {
+                Ok(json)=> {
+                    Ok(json.data.into_action_response())
+                },
+                Err(err)=> Err(format!("Error parsing JSON: {}", err)),
+            }
+        },
+        Err(err) => Err(format!("error {}",err)),
     }
 }
