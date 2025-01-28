@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-use crate::integrations::action_response::ActionResponse;
+use crate::integrations::{action_response::ActionResponse, into_action_response::IntoActionResponse};
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct IpinfoIo {
@@ -14,8 +14,8 @@ pub struct IpinfoIo {
     pub timezone: String,
 }
 
-impl IpinfoIo {
-    pub fn into_action_response(self)-> ActionResponse {
+impl IntoActionResponse for IpinfoIo {
+    fn into_action_response(self)-> ActionResponse {
        let action_response = ActionResponse::new()
        .set_output_field("ip", self.ip)
        .set_output_field("city", self.city)

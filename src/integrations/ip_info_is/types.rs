@@ -1,5 +1,5 @@
 use serde::{Deserialize, Serialize};
-use crate::integrations::action_response::ActionResponse;
+use crate::integrations::{action_response::ActionResponse, into_action_response::IntoActionResponse};
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct IpinfoIs {
@@ -27,8 +27,8 @@ pub struct Country {
 }
 
 
-impl IpinfoIs {
-    pub fn into_action_response(self) -> ActionResponse {
+impl IntoActionResponse for IpinfoIs {
+    fn into_action_response(self) -> ActionResponse {
         let mut action_response = ActionResponse::new();
 
         // Append all fields to the ActionResponse

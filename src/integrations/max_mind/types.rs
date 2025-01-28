@@ -1,5 +1,5 @@
 use serde::Deserialize;
-use crate::integrations::action_response::ActionResponse;
+use crate::integrations::{action_response::ActionResponse, into_action_response::IntoActionResponse};
 
 #[derive(Debug, Deserialize)]
 pub struct GeoIPResponseCountry {
@@ -49,8 +49,8 @@ pub struct Names {
     pub fr: Option<String>,
 }
 
-impl GeoIPResponseCountry {
-    pub fn into_action_response(self)-> ActionResponse {
+impl IntoActionResponse for GeoIPResponseCountry {
+    fn into_action_response(self)-> ActionResponse {
         let action_response =  ActionResponse::new()
         .set_output_field("continent_code", self.continent.code)
         .set_output_field("continent_geoname_id", self.continent.geoname_id)

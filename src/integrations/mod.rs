@@ -5,3 +5,5 @@ pub mod action_response;
 pub mod ip_info_is;
 pub mod ip2_location;
 pub mod max_mind;
+pub mod make_reqwest;
+pub mod into_action_response;

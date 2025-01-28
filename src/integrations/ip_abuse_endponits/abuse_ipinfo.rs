@@ -2,11 +2,11 @@ use std::collections::HashMap;
 use chrono::Utc;
 use reqwest::Client;
 use serde_json::Value;
-use crate::integrations::{action_response::ActionResponse, ip_abuse_endponits::types::ReportResponse};
+use crate::integrations::{action_response::ActionResponse, ip_abuse_endponits::types::AbsReportResponse};
 
-use super::types::{AbsCheck, AbsCheckResponse, ApiResponse, ReportsResponse, AbsBlacklistResponse};
+use super::types::{AbsBlacklistResponse, AbsCheck, AbsCheckResponse, AbsReportsResponse, ReportsResponse};
 
-pub async fn check_ip(ip_address: &str, api_key: &str)->Result<ActionResponse,String> {
+pub async fn check_ip(ip_address: &str, api_key: &str)->Result<AbsCheckResponse,String> {
     let client = Client::new();
     let url = "https://api.abuseipdb.com/api/v2/check";
 
@@ -28,8 +28,8 @@ pub async fn check_ip(ip_address: &str, api_key: &str)->Result<ActionResponse,St
             if resp.status().is_success() {
                 match resp.json::<AbsCheckResponse>().await {
                     Ok(abs_check) => {
-                        let action_response =  abs_check.data.into_action_response();
-                        Ok(action_response)
+                        // let action_response =  abs_check.data.into_action_response();
+                        Ok(abs_check)
                     },
                     Err(err) => {
                         let err = format!("Failed to parse JSON response: {}", err);
@@ -63,7 +63,7 @@ pub async fn fetch_reports(
     page: u32,
     per_page: u32,
     api_key: &str,
-) -> Result<ActionResponse, String> {
+) -> Result<AbsReportsResponse, String> {
     let client = Client::new();
     let url = "https://api.abuseipdb.com/api/v2/reports";
 
@@ -82,9 +82,9 @@ pub async fn fetch_reports(
     match response {
         Ok(resp) => {
             if resp.status().is_success() {
-                match resp.json::<ApiResponse>().await {
+                match resp.json::<AbsReportsResponse>().await {
                     Ok(api_response) => {
-                        Ok(api_response.data.into_action_response())
+                        Ok(api_response)
                     },
                     Err(err) => Err(format!("Failed to get response text: {}", err))
                 }
@@ -108,7 +108,7 @@ pub async fn fetch_blacklist(
     confidence_minimum: u32, 
     api_key: &str, 
     limit:u32,
-) -> Result<ActionResponse, String> {
+) -> Result<AbsBlacklistResponse, String> {
     let client = Client::new();
     let url = format!("https://api.abuseipdb.com/api/v2/blacklist");
 
@@ -125,7 +125,7 @@ pub async fn fetch_blacklist(
             if resp.status().is_success() {
                 match resp.json::<AbsBlacklistResponse>().await {
                     Ok(json) => {
-                        Ok(json.into_action_response())
+                        Ok(json)
                     },
                     Err(err) => Err(format!("Failed to parse JSON response: {}", err)),
                 }
@@ -146,7 +146,7 @@ pub async fn fetch_blacklist(
 }
 
 
-pub async fn report_ip(ip:&str, api_key: &str, categories:&str, comment: &str)-> Result<ActionResponse, String>{
+pub async fn report_ip(ip:&str, api_key: &str, categories:&str, comment: &str)-> Result<AbsReportResponse, String>{
     let client = Client::new();
     let url = "https://api.abuseipdb.com/api/v2/report";
 
@@ -168,10 +168,10 @@ pub async fn report_ip(ip:&str, api_key: &str, categories:&str, comment: &str)->
 
     match result {
         Ok(response)=> {
-            let body = response.json::<ReportResponse>().await;
+            let body = response.json::<AbsReportResponse>().await;
             match body {
                 Ok(json)=> {
-                    Ok(json.data.into_action_response())
+                    Ok(json)
                 },
                 Err(err)=> Err(format!("Error parsing JSON: {}", err)),
             }

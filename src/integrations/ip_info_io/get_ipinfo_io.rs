@@ -7,7 +7,7 @@ pub async fn fetch_ip_info_io(
     base_url: &str,
     ip_address: &str,
     token: &str,
-)-> Result<ActionResponse,String> {
+)-> Result<IpinfoIo,String> {
     let client = Client::new();
     let url = format!("{}{}?token={}", base_url, ip_address, token);
 
@@ -22,8 +22,8 @@ pub async fn fetch_ip_info_io(
             if resp.status().is_success() {
                 match resp.json::<IpinfoIo>().await {
                     Ok(ipinfoio) => {
-                        let action_response = ipinfoio.into_action_response();
-                        Ok(action_response)
+                        // let action_response = ipinfoio.into_action_response();
+                        Ok(ipinfoio)
                     },
                     Err(err) => {
                         let err = format!("Failed to parse JSON response: {}", err);

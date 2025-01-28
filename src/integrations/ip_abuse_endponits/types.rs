@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-use crate::integrations::action_response::ActionResponse;
+use crate::integrations::{action_response::ActionResponse, into_action_response::IntoActionResponse};
 
 //? abs_check
 #[derive(Serialize, Deserialize, Debug)]
@@ -37,30 +37,30 @@ pub struct AbsCheck {
     pub last_reported_at: Option<String>,
 }
 
-impl AbsCheck {
-    pub fn into_action_response(self)-> ActionResponse {
+impl IntoActionResponse for AbsCheckResponse {
+    fn into_action_response(self)-> ActionResponse {
         let action_response = ActionResponse::new()
-        .set_output_field("ipAddress", self.ip_address)
-        .set_output_field("isPublic", self.is_public)
-        .set_output_field("ipVersion", self.ip_version)
-        .set_output_field("isWhitelisted", self.is_whitelisted)
-        .set_output_field("abuseConfidenceScore", self.abuse_confidence_score)
-        .set_output_field("countryCode", self.country_code)
-        .set_output_field("usageType", self.usage_type)
-        .set_output_field("isp", self.isp)
-        .set_output_field("domain", self.domain)
-        .set_output_field("hostnames", self.hostnames)
-        .set_output_field("isTor", self.is_tor)
-        .set_output_field("totalReports", self.total_reports)
-        .set_output_field("numDistinctUsers", self.num_distinct_users)
-        .set_output_field("lastReportedAt", self.last_reported_at);
+        .set_output_field("ipAddress", self.data.ip_address)
+        .set_output_field("isPublic", self.data.is_public)
+        .set_output_field("ipVersion", self.data.ip_version)
+        .set_output_field("isWhitelisted", self.data.is_whitelisted)
+        .set_output_field("abuseConfidenceScore", self.data.abuse_confidence_score)
+        .set_output_field("countryCode", self.data.country_code)
+        .set_output_field("usageType", self.data.usage_type)
+        .set_output_field("isp", self.data.isp)
+        .set_output_field("domain", self.data.domain)
+        .set_output_field("hostnames", self.data.hostnames)
+        .set_output_field("isTor", self.data.is_tor)
+        .set_output_field("totalReports", self.data.total_reports)
+        .set_output_field("numDistinctUsers", self.data.num_distinct_users)
+        .set_output_field("lastReportedAt", self.data.last_reported_at);
     action_response
     }
 }
 
 //? abs_reports
 #[derive(Debug, Serialize, Deserialize)]
-pub struct ApiResponse {
+pub struct AbsReportsResponse {
     pub data: ReportsResponse
 }
 
@@ -77,11 +77,11 @@ pub struct ReportsResponse {
     pub next_page_url: Option<String>,
     #[serde(rename = "previousPageUrl")]
     pub previous_page_url: Option<String>,
-    pub results: Vec<SecurityReport>,
+    pub results: Vec<Reports>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
-pub struct SecurityReport {
+pub struct Reports {
     #[serde(rename = "reportedAt")]
     pub reported_at: String,
     pub comment: String,
@@ -95,29 +95,32 @@ pub struct SecurityReport {
 }
 
 
-impl ReportsResponse {
-    pub fn into_action_response(self)-> ActionResponse {
-        let acttion_response = ActionResponse::new()
-        .set_output_field("total", self.total)
-        .set_output_field("page", self.page)
-        .set_output_field("count", self.count)
-        .set_output_field("per_page", self.per_page)
-        .set_output_field("last_page", self.last_page)
-        .set_output_field("next_page_url", self.next_page_url)
-        .set_output_field("previous_page_url", self.previous_page_url)
-        .set_output_field("reportedAt", self.results[0].reported_at.clone())
-        .set_output_field("comment", self.results[0].comment.clone())
-        .set_output_field("categories", self.results[0].categories.clone())
-        .set_output_field("reporterId", self.results[0].reporter_id.clone())
-        .set_output_field("reporterCountryCode", self.results[0].reporter_country_code.clone())
-        .set_output_field("reporterCountryName", self.results[0].reporter_country_name.clone());
-    acttion_response
+impl IntoActionResponse for AbsReportsResponse {
+    fn into_action_response(self)-> ActionResponse {
+        let mut action_response = ActionResponse::new()
+        .set_output_field("total", self.data.total)
+        .set_output_field("page", self.data.page)
+        .set_output_field("count", self.data.count)
+        .set_output_field("per_page", self.data.per_page)
+        .set_output_field("last_page", self.data.last_page)
+        .set_output_field("next_page_url", self.data.next_page_url)
+        .set_output_field("previous_page_url", self.data.previous_page_url);
+        
+        if let Some(first_result) = self.data.results.get(0) {
+            action_response = action_response
+                .set_output_field("reportedAt", first_result.reported_at.clone())
+                .set_output_field("comment", first_result.comment.clone())
+                .set_output_field("categories", first_result.categories.clone())
+                .set_output_field("reporterId", first_result.reporter_id.clone())
+                .set_output_field("reporterCountryCode", first_result.reporter_country_code.clone())
+                .set_output_field("reporterCountryName", first_result.reporter_country_name.clone());
+        };
+    action_response
     }
 }
 
 
 //? abs_blacklist
-
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Meta {
     #[serde(rename = "generatedAt")]
@@ -142,8 +145,8 @@ pub struct AbsBlacklistResponse {
     pub data: Vec<IpData>,
 }
 
-impl AbsBlacklistResponse {
-    pub fn into_action_response(self)-> ActionResponse {
+impl IntoActionResponse for AbsBlacklistResponse {
+    fn into_action_response(self)-> ActionResponse {
         let action_response = ActionResponse::new()
         .set_output_field("generatedAt", self.meta.generated_at.clone())
         .set_output_field("ipAddress", self.data[0].ip_address.clone())
@@ -155,9 +158,9 @@ impl AbsBlacklistResponse {
 }
 
 
-
+//? abs report ip 
 #[derive(Debug, Serialize, Deserialize)]
-pub struct ReportResponse {
+pub struct AbsReportResponse {
     pub data: ReportData,
 }
 
@@ -169,11 +172,11 @@ pub struct ReportData {
     abuse_confidence_score: u32,
 }
 
-impl ReportData {
-    pub fn into_action_response(self)-> ActionResponse {
+impl IntoActionResponse for AbsReportResponse {
+    fn into_action_response(self)-> ActionResponse {
         let action_response = ActionResponse::new()
-        .set_output_field("ipAddress", self.ip_address)
-        .set_output_field("abuseConfidenceScore", self.abuse_confidence_score);
+        .set_output_field("ipAddress", self.data.ip_address)
+        .set_output_field("abuseConfidenceScore", self.data.abuse_confidence_score);
     action_response
     }
 }
