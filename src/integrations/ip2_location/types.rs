@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-use crate::integrations::action_response::ActionResponse;
+use crate::integrations::{action_response::ActionResponse, into_action_response::IntoActionResponse};
 
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -20,8 +20,8 @@ pub struct Ip2Location {
     is_proxy: bool,
 }
 
-impl Ip2Location {
-    pub fn into_action_response(self) -> ActionResponse {
+impl IntoActionResponse for Ip2Location {
+    fn into_action_response(self) -> ActionResponse {
         let mut action_response = ActionResponse::new();
         action_response = action_response
             .set_output_field("ip", self.ip)

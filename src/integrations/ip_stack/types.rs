@@ -1,7 +1,7 @@
 use std::{any::Any, collections::HashMap};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
-use crate::integrations::action_response::ActionResponse;
+use crate::integrations::{action_response::ActionResponse, into_action_response::IntoActionResponse};
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct IpStack {
@@ -46,8 +46,31 @@ pub struct Language {
     pub native: String,
 }
 
-impl IpStack {
-    pub fn into_action_response(self) -> ActionResponse {
+#[derive(Debug, Deserialize)]
+struct IpStackError {
+    success: bool,
+    error: ErrorDetail,
+}
+
+#[derive(Debug, Deserialize)]
+struct ErrorDetail {
+    code: i32,
+    #[serde(rename = "type")]
+    error_type: String,
+    info: String,
+}
+
+// Combined response type
+#[derive(Debug, Deserialize)]
+#[serde(untagged)]
+enum IpStackResponse {
+    Success(IpStack),
+    Error(IpStackError),
+}
+
+
+impl IntoActionResponse for IpStack {
+    fn into_action_response(self) -> ActionResponse {
         let mut response = ActionResponse::new();
 
         // Base fields

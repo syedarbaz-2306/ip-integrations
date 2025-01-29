@@ -132,8 +132,8 @@ pub struct Traits {
     pub network:String,
 }
 
-impl GeoIPResponseCity {
-    pub fn into_action_response(self)-> ActionResponse {
+impl IntoActionResponse for GeoIPResponseCity {
+    fn into_action_response(self)-> ActionResponse {
         let action_response = ActionResponse::new()
         .set_output_field("city_geoname_id", self.city.geoname_id)
         .set_output_field("city_name", self.city.names.en)
