@@ -10,7 +10,7 @@ use integrations::ip_info_io::get_ipinfo_io::fetch_ip_info_io;
 use integrations::ip_abuse_endponits::abuse_ipinfo::{check_ip, fetch_blacklist, fetch_reports, report_ip};
 use integrations::ip_info_is::types::IpinfoIs;
 use integrations::ip_stack::types::IpStack;
-use integrations::make_reqwest::{make_request, RequestConfig};
+use integrations::make_reqwest::{make_request, RequestConfig, Auth::Bearer};
 use integrations::max_mind::get_max_mind::{fetch_city_endpoint, fetch_country_endpoint, fetch_insights_endpoint};
 use integrations::max_mind::model::InsightsResponse;
 use integrations::max_mind::types::{GeoIPResponseCity, GeoIPResponseCountry};
@@ -20,6 +20,7 @@ use integrations::ip_abuse_endponits::types::{AbsBlacklistResponse, AbsCheckResp
 use integrations::make_reqwest::Auth::Basic;
 use serde_json::Value;
 use dotenv::dotenv;
+use integrations::trend_micro::suspicious_objects::types::SuspiciousObjectResponse;
 #[tokio::main]
 async fn main() {
     dotenv().ok();
@@ -35,11 +36,14 @@ async fn main() {
     let ip2loaction_key = env::var("IP2LOCATION_KEY")
     .expect("IP2LOCATION_KEY not found in .env file");
 
-    let macmind_accounid = env::var("MAXMIND_ACCOUNT_ID")
+    let maxmind_accounid = env::var("MAXMIND_ACCOUNT_ID")
     .expect("MAXMIND_ACCOUNT_ID not found in .env file");
 
     let maxmind_license_key = env::var("MAXMIND_LICENSE_KEY")
     .expect("MAXMIND_LICENSE_KEY not found in .env file");
+
+    let trend_micro_token = env::var("TREND_MICRO_TOKEN")
+    .expect("TREND_MICRO_TOKEN not found in .env file");
 
     // //* */ ip infois example 
     // let config = RequestConfig::new("https://ipinfo.is/", Method::GET);
@@ -148,7 +152,7 @@ async fn main() {
 
     // let mut header = HeaderMap::new();
     // header.insert(ACCEPT, HeaderValue::from_static("application/json"));
-    // header.insert("key", HeaderValue::from_static(api_key));
+    // header.insert("key", HeaderValue::from_str(&abuseipdb_apikey));
 
     // let config = RequestConfig::new("https://api.abuseipdb.com/api/v2/report".to_string(), Method::POST)
     // .with_params(params)
@@ -220,7 +224,7 @@ async fn main() {
     // //* maxmind city endpoint */
     // let ip_addr = "2406:7400:9a:69a9:d7f:6040:91ac:b84f";
 
-    // let auth = Basic { username: account_id.to_string(), password: Some(maxmind.to_string()) };
+    // let auth = Basic { username: maxmind_accounid.to_string(), password: Some(maxmind_license_key.to_string()) };
     // let config = RequestConfig::new(format!("https://geoip.maxmind.com/geoip/v2.1/city/{}",ip_addr), Method::GET)
     // .with_auth(auth);
 
@@ -229,5 +233,25 @@ async fn main() {
     // match res {
     //     Ok(action_response) => println!("Action response: {:?}", action_response),
     //     Err(e) => println!("Error: {}", e),
-    // }    
+    // }
+
+    //* trend_micro list of suspicious objects */
+
+    let config = RequestConfig::new("https://api.xdr.trendmicro.com/v3.0/threatintel/suspiciousObjects", Method::GET)
+    .params(&[
+        ("orderBy", "lastModifiedDateTime desc"),
+        // ("startDateTime", "YOUR_STARTDATETIME (string)"),
+        // ("endDateTime", "YOUR_ENDDATETIME (string)"),
+        ("top", "50"),
+    ])
+    .headers(&[
+        ("Authorization", format!("Bearer {}",trend_micro_token)),
+    ]);
+
+    let res = make_request::<SuspiciousObjectResponse>(config).await;
+
+    match res {
+        Ok(action_response) => println!("Action response: {:?}", action_response),
+        Err(e) => println!("Error: {}", e),
+    }
 }
