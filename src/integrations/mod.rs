@@ -8,3 +8,4 @@ pub mod max_mind;
 pub mod make_reqwest;
 pub mod into_action_response;
 pub mod trend_micro;
+pub mod reqwest_builder;
