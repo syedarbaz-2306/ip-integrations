@@ -2,15 +2,15 @@ use reqwest::{
     Client, Method, 
     header::{HeaderMap, HeaderName, HeaderValue, CONTENT_TYPE},
 };
-use serde::de::DeserializeOwned;
+use serde::Serialize;
 use serde_json::Value;
 use std::collections::HashMap;
-use super::{action_response::ActionResponse, into_action_response::IntoActionResponse};
 
 #[derive(Debug)]
 pub enum RequestBody {
     Json(Value),
     FormUrlEncoded(HashMap<String, String>),
+    Multipart(reqwest::multipart::Form),
     None,
 }
 
@@ -45,34 +45,31 @@ impl RequestConfig {
         }
     }
 
-    pub fn params<K, V>(mut self, params: &[(K, V)]) -> Self 
+    pub fn params<K, V, I>(mut self, params: I) -> Self 
     where 
         K: AsRef<str>,
         V: AsRef<str>,
+        I: IntoIterator<Item = (K, V)>,
     {
         let mut map = HashMap::new();
-        for (key, value) in params {
+        for (key, value) in params.into_iter() {
             map.insert(key.as_ref().to_string(), value.as_ref().to_string());
         }
         self.params = Some(map);
         self
     }
 
-    pub fn with_params(mut self, params: HashMap<String, String>) -> Self {
-        self.params = Some(params);
-        self
-    }
-
-    pub fn headers<K, V>(mut self, headers: &[(K, V)]) -> Self 
+    pub fn headers<K, V, I>(mut self, headers: I) -> Self 
     where 
         K: AsRef<str>,
         V: AsRef<str>,
+        I: IntoIterator<Item = (K, V)>,
     {
         let mut header_map = HeaderMap::new();
-        for (key, value) in headers {
+        for (key, value) in headers.into_iter() {
             if let (Ok(name), Ok(val)) = (
                 HeaderName::from_bytes(key.as_ref().as_bytes()),
-                HeaderValue::from_str(value.as_ref())
+                HeaderValue::from_str(value.as_ref()),
             ) {
                 header_map.insert(name, val);
             }
@@ -81,12 +78,7 @@ impl RequestConfig {
         self
     }
 
-    pub fn with_headers(mut self, headers: HeaderMap) -> Self {
-        self.headers = Some(headers);
-        self
-    }
-
-    pub fn json_body<T: serde::Serialize>(mut self, body: T) -> Self {
+    pub fn json_body<T: Serialize>(mut self, body: T) -> Self {
         if let Ok(json) = serde_json::to_value(body) {
             self.body = RequestBody::Json(json);
             let mut headers = self.headers.unwrap_or_default();
@@ -101,18 +93,14 @@ impl RequestConfig {
         self
     }
 
-    pub fn with_body(mut self, body: Value) -> Self {
-        self.body = RequestBody::Json(body);
-        self
-    }
-
-    pub fn form_body<K, V>(mut self, form_data: &[(K, V)]) -> Self 
+    pub fn form_body<K, V, I>(mut self, form_data: I) -> Self 
     where 
         K: AsRef<str>,
         V: AsRef<str>,
+        I: IntoIterator<Item = (K, V)>,
     {
         let mut map = HashMap::new();
-        for (key, value) in form_data {
+        for (key, value) in form_data.into_iter() {
             map.insert(key.as_ref().to_string(), value.as_ref().to_string());
         }
         self.body = RequestBody::FormUrlEncoded(map);
@@ -128,20 +116,22 @@ impl RequestConfig {
         self
     }
 
+    pub fn multipart_body(mut self, form: reqwest::multipart::Form) -> Self {
+        self.body = RequestBody::Multipart(form);
+        self
+    }
+
     pub fn with_auth(mut self, auth: Auth) -> Self {
         self.auth = Some(auth);
         self
     }
 }
 
-pub async fn make_request<T>(config: RequestConfig) -> Result<ActionResponse, String>
-where
-    T: DeserializeOwned + IntoActionResponse,
-{
+pub async fn make_request(config: RequestConfig) -> Result<Option<Value>, Value> {
     let client = Client::new();
     
     let mut url = reqwest::Url::parse(&config.url)
-        .map_err(|e| format!("Invalid URL: {}", e))?;
+        .map_err(|e| Value::String(format!("Invalid URL: {}", e)))?;
     
     if let Some(params) = config.params {
         let mut query_pairs = url.query_pairs_mut();
@@ -167,28 +157,46 @@ where
     request = match config.body {
         RequestBody::Json(json) => request.json(&json),
         RequestBody::FormUrlEncoded(form_data) => request.form(&form_data),
+        RequestBody::Multipart(form) => request.multipart(form),
         RequestBody::None => request,
     };
 
     let response = request.send().await;
+
     match response {
         Ok(resp) => {
-            if resp.status().is_success() {
-                match resp.json::<T>().await {
-                    Ok(parsed_response) => Ok(parsed_response.into_action_response()),
-                    Err(err) => Err(format!("Failed to parse JSON response: {}", err)),
+            let status = resp.status();
+            if status.is_success() {
+                if status == reqwest::StatusCode::NO_CONTENT {
+                    Ok(None)
+                } else {
+                    match resp.json::<Value>().await {
+                        Ok(value) => Ok(Some(value)),
+                        Err(e) => Err(Value::String(format!("Failed to parse response JSON: {}", e))),
+                    }
                 }
             } else {
-                Err(format!(
-                    "Request failed with status: {} and message: {}",
-                    resp.status(),
-                    resp.text().await.unwrap_or_else(|_| "Unknown error".to_string())
-                ))
+                let text = resp.text().await.unwrap_or_default();
+                match serde_json::from_str(&text) {
+                    Ok(value) => Err(value),
+                    Err(_) => {
+                        let error_value = serde_json::json!({
+                            "status": status.as_u16(),
+                            "message": text,
+                        });
+                        Err(error_value)
+                    }
+                }
             }
         },
-        Err(err) => match err.status() {
-            Some(status) => Err(format!("Error: {} with status code: {}", err, status)),
-            None => Err(format!("Error: {}", err)),
+        Err(err) => {
+            let status_code = err.status().map(|s| s.as_u16()).unwrap_or(0);
+            let message = err.to_string();
+            let error_value = serde_json::json!({
+                "status": status_code,
+                "message": message,
+            });
+            Err(error_value)
         }
     }
 }

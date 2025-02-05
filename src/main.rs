@@ -8,6 +8,7 @@ use integrations::ip2_location::types::Ip2Location;
 use integrations::ip_abuse_endponits::abuse_ipinfo::{
     check_ip, fetch_blacklist, fetch_reports, report_ip,
 };
+use integrations::ip_abuse_endponits::test::test_check_ip;
 use integrations::ip_abuse_endponits::types::{
     AbsBlacklistResponse, AbsCheckResponse, AbsReportResponse, AbsReportsResponse,
 };
@@ -22,6 +23,7 @@ use integrations::max_mind::get_max_mind::{
 };
 use integrations::max_mind::model::InsightsResponse;
 use integrations::max_mind::types::{GeoIPResponseCity, GeoIPResponseCountry};
+use integrations::trend_micro::custom_scripts::list_custom_scripts::ListCustomScriptsResponse;
 use integrations::trend_micro::domain_account::DomainResponse;
 use integrations::trend_micro::suspicious_objects::remove_suspicious_object::{RemoveSuspiciousObject, Response};
 use integrations::trend_micro::suspicious_objects::{
@@ -33,6 +35,7 @@ use reqwest::Method;
 use serde_json::{json, Value};
 
 use integrations::trend_micro::suspicious_objects::add_suspicious_object::*;
+use reqwest::multipart;
 #[tokio::main]
 async fn main() {
     dotenv().ok();
@@ -394,26 +397,72 @@ async fn main() {
     // }
 
     //*trend-micro force password reset */
-    let config = RequestConfig::new("https://api.xdr.trendmicro.com/v3.0/response/domainAccounts/resetPassword", Method::POST)
-    .json_body(
-        json!(
-            [
-                {
-                    "accountName": "YOUR_ACCOUNTNAME (string)",
-                    "description": "YOUR_DESCRIPTION (string)",
-                }
-            ]
-        )
-    )
-    .headers(&[
-        ("Authorization", format!("Bearer {}", trend_micro_token)),
-        ("Content-Type", "application/json;charset=utf-8".to_string()),
-    ]);
+    // let config = RequestConfig::new("https://api.xdr.trendmicro.com/v3.0/response/domainAccounts/resetPassword", Method::POST)
+    // .json_body(
+    //     json!(
+    //         [
+    //             {
+    //                 "accountName": "YOUR_ACCOUNTNAME (string)",
+    //                 "description": "YOUR_DESCRIPTION (string)",
+    //             }
+    //         ]
+    //     )
+    // )
+    // .headers(&[
+    //     ("Authorization", format!("Bearer {}", trend_micro_token)),
+    //     ("Content-Type", "application/json;charset=utf-8".to_string()),
+    // ]);
     
-    let res = make_request::<Vec<DomainResponse>>(config).await;
+    // let res = make_request::<Vec<DomainResponse>>(config).await;
 
-    match res {
-        Ok(action_response) => println!("Action response: {:?}", action_response),
-        Err(e) => println!("Error: {}", e),
-    }
+    // match res {
+    //     Ok(action_response) => println!("Action response: {:?}", action_response),
+    //     Err(e) => println!("Error: {}", e),
+    // }
+
+    //*trend-micro list custom scripts */
+
+    // let filename: Option<String> = None;
+    // let filetype: Option<String> = None;
+
+    // // Build query parameters
+    // let mut params: Vec<(&str, String)> = Vec::new();
+
+    // if let Some(ref file_name) = filename {
+    //     params.push(("filter", format!("fileName eq '{}'", file_name)));
+    // }
+
+    // if let Some(ref file_type) = filetype {
+    //     params.push(("filter", format!("fileType eq '{}'", file_type)));
+    // }
+
+    // // Build the request configuration
+    // let config = RequestConfig::new(
+    //     "https://api.xdr.trendmicro.com/v3.0/response/customScripts",
+    //     Method::GET,
+    // )
+    // .params(params) // Add query parameters
+    // .headers(vec![("Authorization", format!("Bearer {}", trend_micro_token))]); // Add headers
+
+    // let res = make_request(config).await;
+
+    // match res {
+    //     Ok(Some(json)) => {
+    //         match serde_json::from_value::<ListCustomScriptsResponse>(json) {
+    //             Ok(response) => println!("res: {:?}",response),
+    //             Err(e) => println!("Error parsing JSON: {}", e),
+    //         }
+    //     }
+    //     Ok(None) => {
+    //         println!("Success! No content returned (204).");
+    //     }
+    //     Err(error_json) => {
+    //         println!("Error! API returned: {:?}", error_json);
+    //     }
+    // }
+
+
+    //? abuseipdb check endpoint 
+    let ip_addr = format!("2406:7400:9a:69a9:d7f:6040:91ac:b84f");
+    test_check_ip(ip_addr, abuseipdb_apikey).await;
 }
