@@ -467,8 +467,7 @@ async fn main() {
     let res = test_check_ip(ip_addr, abuseipdb_apikey).await;
 
     match res {
-        Ok(Some(action_response))=>println!("action_response {:?}",action_response),
-        Ok(None)=>println!("Success! No content returned (204)."),
+        Ok(action_response)=>println!("action_response {:?}",action_response),
         Err(error_json)=>println!("Error! API returned: {:?}", error_json),
     }
 }
