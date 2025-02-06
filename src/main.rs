@@ -464,5 +464,11 @@ async fn main() {
 
     //? abuseipdb check endpoint 
     let ip_addr = format!("2406:7400:9a:69a9:d7f:6040:91ac:b84f");
-    test_check_ip(ip_addr, abuseipdb_apikey).await;
+    let res = test_check_ip(ip_addr, abuseipdb_apikey).await;
+
+    match res {
+        Ok(Some(action_response))=>println!("action_response {:?}",action_response),
+        Ok(None)=>println!("Success! No content returned (204)."),
+        Err(error_json)=>println!("Error! API returned: {:?}", error_json),
+    }
 }

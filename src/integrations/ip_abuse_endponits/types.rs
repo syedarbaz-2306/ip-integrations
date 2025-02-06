@@ -37,8 +37,8 @@ pub struct AbsCheck {
     pub last_reported_at: Option<String>,
 }
 
-impl IntoActionResponse for AbsCheckResponse {
-    fn into_action_response(self)-> ActionResponse {
+impl AbsCheckResponse {
+    pub fn into_action_response(self)-> ActionResponse {
         let action_response = ActionResponse::new()
         .set_output_field("ipAddress", self.data.ip_address)
         .set_output_field("isPublic", self.data.is_public)
