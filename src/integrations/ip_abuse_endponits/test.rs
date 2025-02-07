@@ -1,6 +1,6 @@
 use reqwest::Method;
-use serde_json::Value;
-use crate::integrations::{action_response::{self, ActionResponse}, ip_abuse_endponits::types::AbsCheckResponse, make_reqwest::{make_request, RequestConfig}};
+use serde_json::from_value;
+use crate::integrations::{action_response::ActionResponse, ip_abuse_endponits::types::AbsCheckResponse, make_reqwest::{make_request, RequestConfig}};
 pub async fn test_check_ip(
     ip_addr:String,
     api_key:String,
@@ -17,9 +17,9 @@ pub async fn test_check_ip(
     let res = make_request(config).await;
     let action_response = ActionResponse::new();
     match res {
-        Ok(Some(json))=>{
-            match serde_json::from_value::<AbsCheckResponse>(json) {
-                Ok(abs_check_response)=>Ok(abs_check_response.into_action_response()),
+        Ok(Some(value))=>{
+            match from_value::<AbsCheckResponse>(value) {
+                Ok(r)=>Ok(r.into_action_response()),
                 Err(e)=>Err(format!("Failed to parse response JSON: {}", e)),
             }
         },

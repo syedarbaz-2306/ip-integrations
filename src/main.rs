@@ -24,6 +24,7 @@ use integrations::max_mind::get_max_mind::{
 use integrations::max_mind::model::InsightsResponse;
 use integrations::max_mind::types::{GeoIPResponseCity, GeoIPResponseCountry};
 use integrations::trend_micro::custom_scripts::list_custom_scripts::ListCustomScriptsResponse;
+use integrations::trend_micro::custom_scripts::run_custom_script::{self, RunCustomScript};
 use integrations::trend_micro::domain_account::DomainResponse;
 use integrations::trend_micro::suspicious_objects::remove_suspicious_object::{RemoveSuspiciousObject, Response};
 use integrations::trend_micro::suspicious_objects::{
@@ -32,7 +33,7 @@ use integrations::trend_micro::suspicious_objects::{
 };
 use reqwest::header::{self, HeaderMap, HeaderValue, ACCEPT};
 use reqwest::Method;
-use serde_json::{json, Value};
+use serde_json::{from_value, json, Value};
 
 use integrations::trend_micro::suspicious_objects::add_suspicious_object::*;
 use reqwest::multipart;
@@ -463,11 +464,44 @@ async fn main() {
 
 
     //? abuseipdb check endpoint 
-    let ip_addr = format!("2406:7400:9a:69a9:d7f:6040:91ac:b84f");
-    let res = test_check_ip(ip_addr, abuseipdb_apikey).await;
+    // let ip_addr = format!("2406:7400:9a:69a9:d7f:6040:91ac:b84f");
+    // let res = test_check_ip(ip_addr, abuseipdb_apikey).await;
+
+    // match res {
+    //     Ok(action_response)=>println!("action_response {:?}",action_response),
+    //     Err(error_json)=>println!("Error! API returned: {:?}", error_json),
+    // }
+
+    let config = RequestConfig::new("https://api.xdr.trendmicro.com/v3.0/response/endpoints/runScript", Method::POST)
+    .json_body(json!(
+        [
+            {
+                    "description": "task description",
+                    "agentGuid": "cb9c8412-1f64-4fa0-a36b-76bf41a07ede",
+                    "fileName": "test.ps1",
+                    "parameter": "string"
+            }
+        ]
+    ))
+    .headers(vec![
+        ("Authorization", format!("Bearer {}", trend_micro_token)),
+        ("Content-Type", "application/json".to_string()),
+    ]);
+
+    let res = make_request(config).await;
 
     match res {
-        Ok(action_response)=>println!("action_response {:?}",action_response),
-        Err(error_json)=>println!("Error! API returned: {:?}", error_json),
+        Ok(Some(value))=> {
+            match from_value::<Vec<RunCustomScript>>(value) {
+                Ok(r)=> {
+                    if let Some(run_custom_script) = r.into_iter().next(){
+                        println!("run cus : {:?}",run_custom_script);
+                    }
+                }
+                Err(e)=>println!("error parsing json {}",e),
+            }
+        }
+        Ok(None)=>println!("no response returned"),
+        Err(e)=>println!("error making request {}",e),
     }
 }
