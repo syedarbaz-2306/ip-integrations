@@ -100,7 +100,7 @@ impl IntoActionResponse for IpStack {
             response = response.set_output_field("radius", radius);
         }
         if let Some(connection_type) = self.connection_type {
-            response = response.set_output_field("connection_type", connection_type);
+            response = response.set_output_field("connection_type", connection_type.to_string());
         }
 
         // Location fields

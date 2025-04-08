@@ -21,7 +21,7 @@ pub async fn vt_get_ip_report(ip_address:String, api_key:String) {
         Ok(Some(json))=>{
             let response = serde_json::from_value::<IpAddressResponse>(json)
             .map_err(|e| format!("Failed to parse response JSON: {}", e)).unwrap();
-            print!("{:?}",response);
+            print!("{:?}",response.data.into_action_response());
             
         }
         Ok(None)=>print!("succuess"),
