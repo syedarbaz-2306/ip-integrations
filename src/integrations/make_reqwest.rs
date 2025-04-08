@@ -10,7 +10,6 @@ use std::collections::HashMap;
 pub enum RequestBody {
     Json(Value),
     FormUrlEncoded(HashMap<String, String>),
-    Multipart(reqwest::multipart::Form),
     None,
 }
 
@@ -116,11 +115,6 @@ impl RequestConfig {
         self
     }
 
-    pub fn multipart_body(mut self, form: reqwest::multipart::Form) -> Self {
-        self.body = RequestBody::Multipart(form);
-        self
-    }
-
     pub fn with_auth(mut self, auth: Auth) -> Self {
         self.auth = Some(auth);
         self
@@ -157,7 +151,6 @@ pub async fn make_request(config: RequestConfig) -> Result<Option<Value>, Value>
     request = match config.body {
         RequestBody::Json(json) => request.json(&json),
         RequestBody::FormUrlEncoded(form_data) => request.form(&form_data),
-        RequestBody::Multipart(form) => request.multipart(form),
         RequestBody::None => request,
     };
 

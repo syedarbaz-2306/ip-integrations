@@ -145,8 +145,8 @@ pub struct AbsBlacklistResponse {
     pub data: Vec<IpData>,
 }
 
-impl IntoActionResponse for AbsBlacklistResponse {
-    fn into_action_response(self)-> ActionResponse {
+impl AbsBlacklistResponse {
+    pub fn into_action_response(self)-> ActionResponse {
         let action_response = ActionResponse::new()
         .set_output_field("generatedAt", self.meta.generated_at.clone())
         .set_output_field("ipAddress", self.data[0].ip_address.clone())

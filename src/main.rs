@@ -8,7 +8,7 @@ use integrations::ip2_location::types::Ip2Location;
 use integrations::ip_abuse_endponits::abuse_ipinfo::{
     check_ip, fetch_blacklist, fetch_reports, report_ip,
 };
-use integrations::ip_abuse_endponits::test::test_check_ip;
+use integrations::ip_abuse_endponits::test::{test_blacklist_ips, test_check_ip};
 use integrations::ip_abuse_endponits::types::{
     AbsBlacklistResponse, AbsCheckResponse, AbsReportResponse, AbsReportsResponse,
 };
@@ -23,6 +23,7 @@ use integrations::max_mind::get_max_mind::{
 };
 use integrations::max_mind::model::InsightsResponse;
 use integrations::max_mind::types::{GeoIPResponseCity, GeoIPResponseCountry};
+use integrations::nmap::exe_nmap::exe_nmap;
 use integrations::trend_micro::custom_scripts::list_custom_scripts::ListCustomScriptsResponse;
 use integrations::trend_micro::custom_scripts::run_custom_script::{self, RunCustomScript};
 use integrations::trend_micro::domain_account::DomainResponse;
@@ -31,6 +32,7 @@ use integrations::trend_micro::suspicious_objects::{
     add_suspicious_object::{AddSuspiciousObjectResponse, SuspiciousBodyObject},
     suspicious_object_list::SuspiciousObjectResponse,
 };
+use integrations::vt::get_ip_report::vt_get_ip_report;
 use reqwest::header::{self, HeaderMap, HeaderValue, ACCEPT};
 use reqwest::Method;
 use serde_json::{from_value, json, Value};
@@ -472,36 +474,55 @@ async fn main() {
     //     Err(error_json)=>println!("Error! API returned: {:?}", error_json),
     // }
 
-    let config = RequestConfig::new("https://api.xdr.trendmicro.com/v3.0/response/endpoints/runScript", Method::POST)
-    .json_body(json!(
-        [
-            {
-                    "description": "task description",
-                    "agentGuid": "cb9c8412-1f64-4fa0-a36b-76bf41a07ede",
-                    "fileName": "test.ps1",
-                    "parameter": "string"
-            }
-        ]
-    ))
-    .headers(vec![
-        ("Authorization", format!("Bearer {}", trend_micro_token)),
-        ("Content-Type", "application/json".to_string()),
-    ]);
+    // //? abuseipdb blacklist endpoint
+    // let ip_addr = format!("2406:7400:9a:69a9:d7f:6040:91ac:b84f");
+    // let res = test_blacklist_ips(
+    //     abuseipdb_apikey,
+    //     6,
+    //     90,
+    //     10,
+    //     "US",
+    // ).await;
 
-    let res = make_request(config).await;
+    // match res {
+    //     Ok(action_response)=>println!("action_response {:?}",action_response),
+    //     Err(error_json)=>println!("Error! API returned: {:?}", error_json),
+    // }
 
-    match res {
-        Ok(Some(value))=> {
-            match from_value::<Vec<RunCustomScript>>(value) {
-                Ok(r)=> {
-                    if let Some(run_custom_script) = r.into_iter().next(){
-                        println!("run cus : {:?}",run_custom_script);
-                    }
-                }
-                Err(e)=>println!("error parsing json {}",e),
-            }
-        }
-        Ok(None)=>println!("no response returned"),
-        Err(e)=>println!("error making request {}",e),
-    }
+    // let config = RequestConfig::new("https://api.xdr.trendmicro.com/v3.0/response/endpoints/runScript", Method::POST)
+    // .json_body(json!(
+    //     [
+    //         {
+    //                 "description": "task description",
+    //                 "agentGuid": "cb9c8412-1f64-4fa0-a36b-76bf41a07ede",
+    //                 "fileName": "test.ps1",
+    //                 "parameter": "string"
+    //         }
+    //     ]
+    // ))
+    // .headers(vec![
+    //     ("Authorization", format!("Bearer {}", trend_micro_token)),
+    //     ("Content-Type", "application/json".to_string()),
+    // ]);
+
+    // let res = make_request(config).await;
+
+    // match res {
+    //     Ok(Some(value))=> {
+    //         match from_value::<Vec<RunCustomScript>>(value) {
+    //             Ok(r)=> {
+    //                 if let Some(run_custom_script) = r.into_iter().next(){
+    //                     println!("run cus : {:?}",run_custom_script);
+    //                 }
+    //             }
+    //             Err(e)=>println!("error parsing json {}",e),
+    //         }
+    //     }
+    //     Ok(None)=>println!("no response returned"),
+    //     Err(e)=>println!("error making request {}",e),
+    // }
+    vt_get_ip_report(
+        "2405:201:d000:d8d8:d06:25be:448c:9581".to_string(),
+        "4e8f76d98c99f17ad606e3121feb7c284cbc222252c8576e1f004b71abb97f92".to_string()
+    ).await;
 }
