@@ -12,3 +12,7 @@ pub mod reqwest_builder;
 pub mod nmap;
 pub mod vt;
 pub mod variable;
+pub mod vt_ip;
+pub mod vt_domain;
+pub mod vt_url;
+pub mod vt_file;

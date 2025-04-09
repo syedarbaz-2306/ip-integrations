@@ -33,6 +33,9 @@ use integrations::trend_micro::suspicious_objects::{
     suspicious_object_list::SuspiciousObjectResponse,
 };
 use integrations::vt::get_ip_report::vt_get_ip_report;
+use integrations::vt_domain::get_domain_report::vt_get_domain_report;
+use integrations::vt_file::get_file_report::vt_get_file_report;
+use integrations::vt_url::get_url_report::vt_get_url_report;
 use reqwest::header::{self, HeaderMap, HeaderValue, ACCEPT};
 use reqwest::Method;
 use serde_json::{from_value, json, Value};
@@ -60,6 +63,8 @@ async fn main() {
 
     let trend_micro_token =
         env::var("TREND_MICRO_TOKEN").expect("TREND_MICRO_TOKEN not found in .env file");
+
+    let vt_api_key = env::var("VT_API_KEY").expect("VT_API_KEY not found in .env file");
 
     // //* */ ip infois example
     // let config = RequestConfig::new("https://ipinfo.is/", Method::GET);
@@ -521,8 +526,25 @@ async fn main() {
     //     Ok(None)=>println!("no response returned"),
     //     Err(e)=>println!("error making request {}",e),
     // }
-    vt_get_ip_report(
-        "2405:201:d000:d8d8:d06:25be:448c:9581".to_string(),
-        "4e8f76d98c99f17ad606e3121feb7c284cbc222252c8576e1f004b71abb97f92".to_string()
+
+
+    // vt_get_ip_report(
+    //     "2405:201:d000:d8d8:d06:25be:448c:9581".to_string(),
+    //     vt_api_key
+    // ).await;
+
+    // vt_get_domain_report(
+    //     "gemini.google.com".to_string(),
+    //     vt_api_key
+    // ).await;
+
+    // vt_get_url_report(
+    //     "https://www.google.com/".to_string(),
+    //     vt_api_key
+    // ).await;
+
+    vt_get_file_report(
+        "C:/Program Files/Java/jdk-24/bin/rmiregistry.exe".to_string(), 
+        vt_api_key
     ).await;
 }
